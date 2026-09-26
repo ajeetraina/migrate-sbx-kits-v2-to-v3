@@ -344,6 +344,17 @@ Sandbox lifecycle: `sbx ls` · `sbx stop <name>` · `sbx rm [-f] <name>` ·
 
 ---
 
+## Slides
+
+A technical deep-dive deck (Marp) is in
+[`slides/v2-to-v3-migration.md`](slides/v2-to-v3-migration.md). Render it:
+
+```sh
+npx @marp-team/marp-cli@latest slides/v2-to-v3-migration.md -o deck.pdf
+```
+
+---
+
 ## 8. Reference
 
 - **Normative spec:** `docs/spec/SPEC-v3.md` (code wins over docs)
