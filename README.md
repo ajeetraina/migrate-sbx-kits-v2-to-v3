@@ -301,7 +301,50 @@ git push -u origin v3-migration
 
 ---
 
-## 7. Reference
+## 7. Troubleshooting (real issues hit migrating mem0)
+
+These came up end-to-end taking the mem0 kit from authored to running. Each is
+a composition/tooling issue, not a descriptor grammar error.
+
+**`invalid capability name "deb/containerd.io"` when resolving the workload**
+Your `sbx` CLI's spec validator is older than the published workload. Current
+spec §5.1 allows dotted package names (`containerd.io`). Fix: upgrade `sbx` to
+the latest stable (`brew install docker/tap/sbx`), and make sure a newer binary
+isn't shadowed by an older one earlier on `PATH` (`which sbx`, `hash -r`).
+
+**`invalid name "."` from `--kit .`**
+A bare `.` becomes the kit's name in the composed manifest, which isn't a valid
+single path component. Pass a path whose last component is a real name:
+`sbx run <workload> --kit "$PWD" .`
+
+**`env conflict on NO_PROXY: <workload> sets … but <kit> sets …`**
+Two kits setting the *same* env var to *different* values is a hard composition
+failure. The mixin's `mem0.dockerfile` originally set `NO_PROXY`, which the shell
+workload already defines. Fix: **drop the conflicting env from the mixin.** DMR
+reachability is handled by the runtime `network-policy` allow entry plus sbx's
+transparent proxy enforcement — the app-level `NO_PROXY` isn't what gates it.
+(Spec guidance: a variable two kits set differently belongs in a `profile.d`
+drop, not merged `ENV`.)
+
+**`sandbox '…' already exists; --kit can only be used when creating a new sandbox`**
+The sandbox from a prior run is still around. Either remove it and recreate, or
+reconnect to it (it already has the kit installed):
+```sh
+sbx rm -f sbx-kit-shell-sbx-kit-mem0-v3        # then re-run with --kit
+sbx run --name sbx-kit-shell-sbx-kit-mem0-v3   # or just hop back in
+```
+
+**Reading the real failure.** `sbx run` prints a terse `failed to run sandbox
+container`. The specific cause is in the daemon log — find it via
+`sbx daemon status` (it prints the log path) and tail that file.
+
+Sandbox lifecycle: `sbx ls` · `sbx stop <name>` · `sbx rm [-f] <name>` ·
+`sbx prune` (all stopped) · `sbx reset` (all + state). There is no `sbx kit rm`
+— a published kit is an OCI image, removed from its registry.
+
+---
+
+## 8. Reference
 
 - **Normative spec:** `docs/spec/SPEC-v3.md` (code wins over docs)
 - **Tour:** `docs/kit-intro.md`
@@ -309,4 +352,3 @@ git push -u origin v3-migration
 - **Worked kits:** `examples/` — `hello`, `shell`, `gh`, `claude`, `claude-mixin`, `team`
 - **Skills:** `skills/migrate-kit-to-v3/` and `skills/create-kit-v3/`
 - **JSON Schema (editor completion):** `schema/kit.schema.json`
-```

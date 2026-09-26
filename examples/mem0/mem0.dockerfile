@@ -15,13 +15,15 @@
 # descriptor as the single content layer and this ENV rides in the image config.
 FROM scratch
 
-# MIGRATION NOTE: NO_PROXY / no_proxy carried verbatim from v1. They let the
-# mem0 client reach the host's Docker Model Runner (host.docker.internal:12434)
-# directly instead of through the sandbox's forced egress proxy. OPENAI_* point
-# the OpenAI-compatible client at the DMR; the api_key is the DMR sentinel "dmr",
-# not a real credential — which is why this kit declares no credential@1.
+# MIGRATION NOTE: v1 also set NO_PROXY / no_proxy so the mem0 client would reach
+# the host's Docker Model Runner directly. Those are DROPPED here: the shell
+# workload already defines NO_PROXY, and a mixin setting the same variable to a
+# different value is a hard composition conflict ("env conflict on NO_PROXY").
+# They are also unnecessary — the runtime network policy in mem0.yaml allows
+# host.docker.internal:12434, and sbx enforces egress transparently at the proxy
+# boundary regardless of the app-level NO_PROXY. OPENAI_* point the
+# OpenAI-compatible client at the DMR; the api_key is the DMR sentinel "dmr", not
+# a real credential — which is why this kit declares no credential@1.
 ENV OPENAI_BASE_URL="http://host.docker.internal:12434/engines/v1" \
     OPENAI_API_KEY="dmr" \
-    MEM0_TELEMETRY="false" \
-    NO_PROXY="localhost,127.0.0.1,host.docker.internal" \
-    no_proxy="localhost,127.0.0.1,host.docker.internal"
+    MEM0_TELEMETRY="false"
