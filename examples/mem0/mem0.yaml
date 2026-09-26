@@ -1,0 +1,126 @@
+# syntax=docker/sandbox-kit:3
+# yaml-language-server: $schema=https://raw.githubusercontent.com/docker/sandbox-kit-spec/main/schema/kit.schema.json
+schemaVersion: "3"
+displayName: Mem0 (Docker Model Runner)
+description: >-
+  Adds the Mem0 memory layer (mem0ai) to an agent, pre-wired to a local Docker
+  Model Runner for both the LLM and the embedder — no cloud credentials, no
+  external vector database.
+sourceUrl: https://github.com/ajeetraina/sbx-kits-mem0
+licenses: [Apache-2.0]
+
+kind: mixin
+
+# MIGRATION NOTE (v1/v2 → v3): the source kit declared no `version`, `provides`,
+# `sourceUrl` or `licenses`. Publishing is the only place their absence shows,
+# and by then the artifact is already in a registry — so add them now.
+# mem0ai is pinned to 2.0.5 in the install hook below, so the mixin can honestly
+# offer that name@version; `version:` is the artifact's own version and the
+# fallback for any unversioned provide.
+version: "2.0.5"
+provides: ["mem0@2.0.5"]
+
+# MIGRATION NOTE: the source kit declared no dependency on the base. This mixin's
+# install hooks need python3 + pip on whatever workload it lands on — beyond the
+# platform floor (§12 guarantees only bash, sh, curl, git, a CA store, the agent
+# user at uid 1000). Declaring an *unprovidable* name makes the kit refuse to
+# compose EVERYWHERE, so verify the names are really in the base's dpkg database
+# (tilde-versioned entries are in dpkg but never published as a provide):
+#   docker run --rm docker/sbx-kit-shell:1.0.0 dpkg-query -W -f='${Version} ${Status}\n' python3
+#   docker run --rm docker/sbx-kit-shell:1.0.0 dpkg-query -W -f='${Version} ${Status}\n' python3-pip
+# If both print a tilde-free version, uncomment:
+# requires: ["deb/python3", "deb/python3-pip"]
+
+capabilities:
+  # v1 network.allowedDomains → network-policy@1 (host-only rules, so @1, not @2).
+  # v3 is phase-scoped: install hooks and the running agent get separate
+  # allow-lists, and an absent phase grants nothing.
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      # Reached only by the install hooks: pip pulls mem0ai from PyPI, and
+      # `spacy download` fetches the English model from GitHub release assets.
+      # This grant closes before the agent starts.
+      install:
+        allow:
+          - pypi.org
+          - files.pythonhosted.org
+          - raw.githubusercontent.com
+          - github.com
+          - release-assets.githubusercontent.com
+      # Reached by the agent at steady state: the mem0 client talks to the host's
+      # Docker Model Runner for both the LLM and the embedder.
+      runtime:
+        allow:
+          # MIGRATION NOTE: the source kit listed `localhost:12434`, but both the
+          # env vars and config.json point at host.docker.internal:12434.
+          # `localhost` inside the sandbox is the sandbox itself, not the host's
+          # DMR — so the actual runtime connection is host.docker.internal, and
+          # that is what the allow-list must name.
+          - host.docker.internal:12434
+
+  # v1 environment.variables → ENV in the recipe (see mem0.dockerfile). A mixin
+  # carries static env through ENV on its recipe's final stage, which merges into
+  # the composed image; the descriptor has no field for static env.
+
+  # v1 memory: → agent-context@1. The body moved verbatim into mem0-context.md.
+  # No `filename:` here — that is workload-only (the workload owns the agent
+  # profile); a mixin carries `contentFile` alone.
+  - type: com.docker.sandbox/agent-context@1
+    config:
+      contentFile: ./mem0-context.md
+
+  # v1 commands.install + commands.initFiles → lifecycle@1 (one singleton entry).
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      # MIGRATION NOTE: these stay create-time install hooks rather than becoming
+      # overlay layers. mem0ai installs into the *composed base's* system Python
+      # (via --break-system-packages), and a mixin overlay lands on an unknown
+      # base where the Python version and site-packages path differ — a baked
+      # copy would not resolve. The hook runs where Python actually is.
+      # HTTP_PROXY/HTTPS_PROXY are declared because pip and spacy fetch through
+      # the sandbox's forced proxy, and v3 hook environments are deny-by-default:
+      # a hook sees only the vars it lists (plus the platform baseline).
+      install:
+        - command: "pip install --break-system-packages 'mem0ai[nlp]==2.0.5' click"
+          user: "1000"
+          env: [HTTP_PROXY, HTTPS_PROXY]
+          description: "Install Mem0 with NLP extras (spaCy lemmatization) plus click (spaCy CLI dep)"
+        - command: "PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m spacy download en_core_web_sm"
+          user: "1000"
+          env: [HTTP_PROXY, HTTPS_PROXY]
+          description: "Download spaCy English model (env var lets spacy's internal pip call bypass PEP 668)"
+      # v1 initFiles → files. `onlyIfMissing: true` → `overwrite: false`.
+      files:
+        - path: /home/agent/.mem0/config.json
+          mode: "0644"
+          overwrite: false
+          description: "Mem0 config wired to Docker Model Runner (editable)"
+          content: |
+            {
+              "vector_store": {
+                "provider": "qdrant",
+                "config": {
+                  "collection_name": "mem0",
+                  "path": "/home/agent/.mem0/qdrant",
+                  "on_disk": true,
+                  "embedding_model_dims": 1024
+                }
+              },
+              "llm": {
+                "provider": "openai",
+                "config": {
+                  "model": "ai/gemma3",
+                  "openai_base_url": "http://host.docker.internal:12434/engines/v1",
+                  "api_key": "dmr"
+                }
+              },
+              "embedder": {
+                "provider": "openai",
+                "config": {
+                  "model": "ai/mxbai-embed-large",
+                  "openai_base_url": "http://host.docker.internal:12434/engines/v1",
+                  "api_key": "dmr",
+                  "embedding_dims": 1024
+                }
+              }
+            }
