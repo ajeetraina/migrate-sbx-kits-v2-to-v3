@@ -1,9 +1,7 @@
 <!--
-Render this deck with Marp:
-  npx @marp-team/marp-cli@latest slides/v2-to-v3-migration.md -o deck.pdf     # PDF
-  npx @marp-team/marp-cli@latest slides/v2-to-v3-migration.md --pptx -o deck.pptx
-  npx @marp-team/marp-cli@latest slides/v2-to-v3-migration.md --html -o deck.html
-Or use the "Marp for VS Code" extension for live preview.
+Render with Marp (the --html flag is REQUIRED - two slides use styled HTML diagrams):
+  npx @marp-team/marp-cli@latest slides/v2-to-v3-migration.md --html --allow-local-files -o v2-to-v3-migration.pdf
+  npx @marp-team/marp-cli@latest slides/v2-to-v3-migration.md --html --pptx -o deck.pptx
 -->
 ---
 marp: true
@@ -13,13 +11,44 @@ size: 16:9
 header: 'Docker Sandbox Kits · v2 → v3'
 footer: 'github.com/ajeetraina/migrate-sbx-kits-v2-to-v3'
 style: |
-  section { font-size: 24px; }
-  section.lead h1 { font-size: 52px; }
-  code { font-size: 0.85em; }
-  pre { font-size: 0.72em; line-height: 1.25; }
-  table { font-size: 0.8em; }
-  h1 { color: #0b5fff; }
-  section.lead { text-align: center; }
+  section {
+    font-family: 'Helvetica Neue', Arial, system-ui, sans-serif;
+    font-size: 19px;
+    background: #ffffff;
+    color: #1C2B3A;
+    padding: 46px 58px 58px;
+  }
+  h1 { color:#1D63ED; font-size:33px; font-weight:700; margin:0 0 12px; }
+  h2 { color:#1D63ED; font-size:25px; font-weight:600; }
+  h3 { color:#1C2B3A; font-weight:600; }
+  a { color:#1D63ED; text-decoration:none; }
+  strong { color:#1D63ED; }
+  ul, ol { line-height:1.45; }
+  code {
+    font-family:'Roboto Mono',Menlo,monospace;
+    background:#EEF3FC; color:#0A2647; padding:1px 5px; border-radius:4px; font-size:0.85em;
+  }
+  pre {
+    background:#F4F7FC; border:1px solid #D8E2F0; border-left:4px solid #1D63ED;
+    border-radius:8px; padding:10px 14px; font-size:0.58em; line-height:1.32;
+  }
+  pre code { background:transparent; color:#0A2647; padding:0; }
+  table { font-size:0.72em; border-collapse:collapse; width:100%; }
+  th { background:#1D63ED; color:#fff; padding:6px 10px; text-align:left; }
+  td { padding:6px 10px; border-bottom:1px solid #E1E8F0; }
+  blockquote { border-left:4px solid #1D63ED; color:#40566b; padding-left:16px; font-style:italic; }
+  header { color:#8595AC; font-size:13px; }
+  footer { color:#8595AC; font-size:12px; }
+  section::after { color:#1D63ED; font-weight:600; }
+  section.lead {
+    background:radial-gradient(1200px 620px at 18% -10%, #1D63ED 0%, #0A1B2E 72%);
+    color:#ffffff;
+  }
+  section.lead h1 { color:#ffffff; font-size:50px; }
+  section.lead h2 { color:#9DBEFF; }
+  section.lead a { color:#9DBEFF; }
+  section.lead strong { color:#ffffff; }
+  section.lead blockquote { color:#CFE0FF; border-color:#9DBEFF; }
 ---
 
 <!-- _class: lead -->
@@ -29,7 +58,7 @@ style: |
 # Migrating Docker Sandbox Kits
 ## v2 → v3
 
-**Not a schema bump — a new model.**
+**Not a schema bump - a new model.**
 
 A worked, end-to-end migration (mem0), the skill that drives it, and the gotchas.
 
@@ -37,9 +66,9 @@ A worked, end-to-end migration (mem0), the skill that drives it, and the gotchas
 
 ## Agenda
 
-1. What a Kit is — and what actually changed
+1. What a Kit is - and what actually changed
 2. The v3 model: OCI image + Dockerfile + frontend
-3. Descriptor anatomy — kinds, capabilities, provides, args
+3. Descriptor anatomy - kinds, capabilities, provides, args
 4. Authoring forms
 5. The v2 → v3 field map
 6. **Worked example: mem0** (before / after)
@@ -52,12 +81,12 @@ A worked, end-to-end migration (mem0), the skill that drives it, and the gotchas
 
 ## What is a Kit?
 
-A **Kit** packages a piece of a working environment — a tool, an agent, a
-service — so a runtime can *install it, grant it what it needs, and compose it*
+A **Kit** packages a piece of a working environment - a tool, an agent, a
+service - so a runtime can *install it, grant it what it needs, and compose it*
 with other Kits without knowing it in advance.
 
 - **v2:** a `spec.yaml` + a `files/` tree, interpreted by the engine
-- **v3:** **an ordinary OCI image** — declarations in a manifest annotation,
+- **v3:** **an ordinary OCI image** - declarations in a manifest annotation,
   content in the layers, built by a BuildKit frontend
 
 > Dockerfiles made *software* reproducible. Kits make *authority* reproducible.
@@ -83,7 +112,7 @@ with other Kits without knowing it in advance.
 ## v3 = image + recipe + frontend
 
 ```yaml
-# gh.yaml  (the descriptor — declarations)
+# gh.yaml  (the descriptor - declarations)
 # syntax=docker/sandbox-kit:3
 schemaVersion: "3"
 kind: mixin
@@ -94,7 +123,7 @@ capabilities:
 ```
 
 ```dockerfile
-# gh.dockerfile  (the content recipe — ordinary Dockerfile)
+# gh.dockerfile  (the content recipe - ordinary Dockerfile)
 FROM scratch
 COPY --from=build /out /
 ENTRYPOINT ["gh"]
@@ -112,11 +141,38 @@ builds the content, and publishes both as one image.**
 | **`workload`** | a root filesystem (+ entrypoint/env/user in image config) | exactly **one** |
 | **`mixin`** | an overlay that lands on a workload | **zero or more** |
 
-Plus `set` — an *authoring-only* kind that merges several Kits into one
+Plus `set` - an *authoring-only* kind that merges several Kits into one
 publishable image.
 
 A descriptor carries **no name, no image ref, no runtime config**:
 identity is the reference; runtime contract lives in the image config.
+
+---
+
+## How a sandbox is composed
+
+<div style="display:flex; gap:12px; justify-content:center; margin:6px 0 4px;">
+  <div style="background:#EEF3FC; border:1px solid #C7D7F0; border-radius:8px; padding:8px 14px; font-size:0.8em;"><strong>mixin</strong> · gh</div>
+  <div style="background:#EEF3FC; border:1px solid #C7D7F0; border-radius:8px; padding:8px 14px; font-size:0.8em;"><strong>mixin</strong> · mem0</div>
+  <div style="background:#EEF3FC; border:1px solid #C7D7F0; border-radius:8px; padding:8px 14px; font-size:0.8em;"><strong>mixin</strong> · firecrawl</div>
+  <div style="align-self:center; color:#8595AC; font-size:0.75em;">0 … n overlays</div>
+</div>
+
+<div style="text-align:center; color:#1D63ED; font-size:22px; margin:2px 0;">▼&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;▼</div>
+
+<div style="text-align:center; margin:0 0 4px;">
+  <div style="display:inline-block; background:#1D63ED; color:#fff; border-radius:8px; padding:10px 26px; font-weight:600;">workload · sbx-kit-shell &nbsp;<span style="opacity:.8; font-weight:400;">(exactly 1)</span></div>
+</div>
+
+<div style="text-align:center; color:#40566b; font-size:0.72em; margin:2px 0;">resolve as a <strong>closed set</strong> - provides / requires / conflicts</div>
+<div style="text-align:center; color:#1D63ED; font-size:22px; margin:2px 0;">▼</div>
+
+<div style="text-align:center;">
+  <div style="display:inline-block; background:#0A1B2E; color:#fff; border-radius:10px; padding:12px 34px; font-weight:600; letter-spacing:.3px;">composed sandbox - one OCI image, one root filesystem</div>
+</div>
+
+Ordering follows the **dependency graph**, not flag order. One provider per name;
+`requires` unmet → resolution fails **closed**.
 
 ---
 
@@ -136,13 +192,13 @@ args: {}                    # installer-supplied values
 build: | …                  # OR dockerfile: path  OR  kits: []
 ```
 
-Every key is `lowerCamelCase`. **Strict decode** — an unknown key is an error.
+Every key is `lowerCamelCase`. **Strict decode** - an unknown key is an error.
 
 ---
 
 ## Capabilities: one list for everything
 
-Everything the Kit needs but can't supply itself — typed, versioned, answered
+Everything the Kit needs but can't supply itself - typed, versioned, answered
 by the host (granted / refused / prompted).
 
 ```yaml
@@ -158,7 +214,7 @@ Resource grants **and** engine-executed behavior go through the same list:
 `lifecycle@1` · `agent-context@1` · `agent-sessions@1` · `sbx@1` ·
 `resources@1` · `privileged@1` · `long-running@1` …
 
-Unknown types ride opaquely — the extension point.
+Unknown types ride opaquely - the extension point.
 
 ---
 
@@ -180,7 +236,7 @@ conflicts: ["podman"]
 
 ---
 
-## args — two phases
+## args - two phases
 
 ```yaml
 args:
@@ -192,7 +248,7 @@ args:
     env: BROWSER_TIMEOUT       # resolves at CREATE → exported to the container
 ```
 
-- Referenced as `${{ kit.args.name }}` (not shell `$VAR` — can't collide)
+- Referenced as `${{ kit.args.name }}` (not shell `$VAR` - can't collide)
 - **Private by default**: reaches the container only via `env:`, the build only via `buildArg:`
 - Every reference must be declared; create-phase args expand into the *effective descriptor*
 
@@ -200,10 +256,10 @@ args:
 
 ## Four authoring forms
 
-1. **Companion pair** — `gh.yaml` + `gh.dockerfile` (matched by stem) ← default
-2. **Inline `build:`** — Dockerfile text embedded in the descriptor (single file)
-3. **Comment descriptor** — a Dockerfile carrying `# kit:` declarations (file is both)
-4. **Kit set** — `kits: [...]` merges other Kits into one
+1. **Companion pair** - `gh.yaml` + `gh.dockerfile` (matched by stem) ← default
+2. **Inline `build:`** - Dockerfile text embedded in the descriptor (single file)
+3. **Comment descriptor** - a Dockerfile carrying `# kit:` declarations (file is both)
+4. **Kit set** - `kits: [...]` merges other Kits into one
 
 ```yaml
 kind: set
@@ -232,11 +288,11 @@ setup.install/startup/files → capability lifecycle@1
 agentInstructions           → capability agent-context@1
 ```
 
-Add `version:`, `sourceUrl:`, `licenses:` — their absence only shows once published.
+Add `version:`, `sourceUrl:`, `licenses:` - their absence only shows once published.
 
 ---
 
-## Worked example: mem0 — BEFORE (v2)
+## Worked example: mem0 - BEFORE (v2)
 
 ```yaml
 schemaVersion: "1"
@@ -256,11 +312,11 @@ commands:
 memory: "## Mem0 memory layer …"
 ```
 
-A mixin wiring mem0 to a **local Docker Model Runner** — no cloud creds.
+A mixin wiring mem0 to a **local Docker Model Runner** - no cloud creds.
 
 ---
 
-## Worked example: mem0 — AFTER (descriptor)
+## Worked example: mem0 - AFTER (descriptor)
 
 ```yaml
 # syntax=docker/sandbox-kit:3
@@ -287,16 +343,16 @@ capabilities:
 
 ---
 
-## Worked example: mem0 — recipe & context
+## Worked example: mem0 - recipe & context
 
 ```dockerfile
-# mem0.dockerfile — env-carrying overlay
+# mem0.dockerfile - env-carrying overlay
 # syntax=docker/dockerfile:1
 FROM scratch
 ENV OPENAI_BASE_URL="http://host.docker.internal:12434/engines/v1" \
     OPENAI_API_KEY="dmr" \
     MEM0_TELEMETRY="false"
-# NO_PROXY dropped — the workload sets it; a differing mixin value = conflict
+# NO_PROXY dropped - the workload sets it; a differing mixin value = conflict
 ```
 
 ```markdown
@@ -313,9 +369,9 @@ base) · no `credential@1` (api_key = sentinel `"dmr"`) · no `filename:` (mixin
 
 ## The migration skill
 
-`skills/migrate-kit-to-v3/` — a tool-agnostic agent skill that *is* this playbook.
+`skills/migrate-kit-to-v3/` - a tool-agnostic agent skill that *is* this playbook.
 
-**One-time setup** (symlink into Claude Code's skills dir — machine-wide):
+**One-time setup** (symlink into Claude Code's skills dir - machine-wide):
 
 ```sh
 SPEC=/path/to/sandbox-kit-spec
@@ -323,12 +379,41 @@ ln -sfn "$SPEC/skills/migrate-kit-to-v3" ~/.claude/skills/migrate-kit-to-v3
 ln -sfn "$SPEC/skills/create-kit-v3"     ~/.claude/skills/create-kit-v3
 ```
 
-**Per kit** — no copying, edits land in that kit's repo:
+**Per kit** - no copying, edits land in that kit's repo:
 
 ```sh
 cd ~/sbx-kits-mem0
 claude          # then: "migrate this v2 kit to v3"
 ```
+
+---
+
+## The authoring lifecycle
+
+<div style="display:flex; align-items:stretch; justify-content:center; gap:0; margin:14px 0 10px;">
+  <div style="flex:1; background:#EEF3FC; border:1px solid #C7D7F0; border-left:4px solid #1D63ED; border-radius:8px; padding:12px 10px; text-align:center;">
+    <div style="color:#1D63ED; font-weight:700; font-size:1.05em;">VALIDATE</div>
+    <div style="font-size:0.72em; color:#40566b; margin-top:4px;">buildx <code>--output type=cacheonly</code><br/>fail-on-bad-field · builds nothing</div>
+  </div>
+  <div style="align-self:center; color:#1D63ED; font-size:24px; padding:0 8px;">▶</div>
+  <div style="flex:1; background:#EEF3FC; border:1px solid #C7D7F0; border-left:4px solid #1D63ED; border-radius:8px; padding:12px 10px; text-align:center;">
+    <div style="color:#1D63ED; font-weight:700; font-size:1.05em;">BUILD</div>
+    <div style="font-size:0.72em; color:#40566b; margin-top:4px;">frontend runs the recipe<br/>descriptor + content → one image</div>
+  </div>
+  <div style="align-self:center; color:#1D63ED; font-size:24px; padding:0 8px;">▶</div>
+  <div style="flex:1; background:#EEF3FC; border:1px solid #C7D7F0; border-left:4px solid #1D63ED; border-radius:8px; padding:12px 10px; text-align:center;">
+    <div style="color:#1D63ED; font-weight:700; font-size:1.05em;">RUN</div>
+    <div style="font-size:0.72em; color:#40566b; margin-top:4px;"><code>sbx run</code> composes onto<br/>a workload · install hooks fire</div>
+  </div>
+  <div style="align-self:center; color:#1D63ED; font-size:24px; padding:0 8px;">▶</div>
+  <div style="flex:1; background:#1D63ED; border:1px solid #1D63ED; border-radius:8px; padding:12px 10px; text-align:center;">
+    <div style="color:#fff; font-weight:700; font-size:1.05em;">PUBLISH</div>
+    <div style="font-size:0.72em; color:#CFE0FF; margin-top:4px;"><code>--push</code> multi-arch<br/>one ordinary OCI image</div>
+  </div>
+</div>
+
+Same tool (`docker buildx`) drives **validate**, **build**, and **publish** - only the
+output target changes. `sbx run` is the one step that needs a workload to compose onto.
 
 ---
 
@@ -338,7 +423,7 @@ claude          # then: "migrate this v2 kit to v3"
 # 4. Validate (fast fail-on-bad-field; builds nothing to export)
 docker buildx build . -f mem0.yaml --output type=cacheonly
 
-# 6. Run — composed onto a workload (source form, no registry needed)
+# 6. Run - composed onto a workload (source form, no registry needed)
 sbx run docker/sbx-kit-shell:1.0.0 --kit "$PWD" .
 
 # 8. Publish as one ordinary multi-arch image
@@ -351,7 +436,7 @@ Inside the sandbox every Kit is **self-describing**:
 
 ---
 
-## Troubleshooting — real issues we hit
+## Troubleshooting - real issues we hit
 
 | Symptom | Cause → Fix |
 |---|---|
@@ -359,10 +444,10 @@ Inside the sandbox every Kit is **self-describing**:
 | `invalid name "."` from `--kit .` | bare dot isn't a valid name → `--kit "$PWD"` |
 | `env conflict on NO_PROXY` | two kits set it differently → **drop it from the mixin** |
 | `sandbox '…' already exists` | prior run → `sbx rm -f <name>` or `sbx run --name <name>` |
-| `failed to run sandbox container` | terse — real cause in daemon log (`sbx daemon status`) |
+| `failed to run sandbox container` | terse - real cause in daemon log (`sbx daemon status`) |
 
 Lifecycle: `sbx ls · stop · rm [-f] · prune · reset`.
-**No `sbx kit rm`** — a published kit is an OCI image (remove from registry).
+**No `sbx kit rm`** - a published kit is an OCI image (remove from registry).
 
 ---
 
@@ -375,7 +460,7 @@ Takeaways:
 - v3 is an **image + recipe**, not YAML the engine interprets
 - Everything a Kit asks for is **one typed `capabilities` list**
 - The **skill** turns a migration into a repeatable, guided workflow
-- Most friction is **composition/tooling**, not grammar — see Troubleshooting
+- Most friction is **composition/tooling**, not grammar - see Troubleshooting
 
 **Next:** firecrawl & dynatrace (they add `credential@1` + proxy injection).
 
@@ -392,4 +477,4 @@ Takeaways:
 Spec: `docs/spec/SPEC-v3.md` · Tour: `docs/kit-intro.md`
 Capability pages: `docs/spec/capabilities/com.docker.sandbox/`
 
-*Thank you — questions?*
+*Thank you - questions?*
