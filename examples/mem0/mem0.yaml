@@ -4,7 +4,7 @@ schemaVersion: "3"
 displayName: Mem0 (Docker Model Runner)
 description: >-
   Adds the Mem0 memory layer (mem0ai) to an agent, pre-wired to a local Docker
-  Model Runner for both the LLM and the embedder — no cloud credentials, no
+  Model Runner for both the LLM and the embedder - no cloud credentials, no
   external vector database.
 sourceUrl: https://github.com/ajeetraina/sbx-kits-mem0
 licenses: [Apache-2.0]
@@ -13,7 +13,7 @@ kind: mixin
 
 # MIGRATION NOTE (v1/v2 → v3): the source kit declared no `version`, `provides`,
 # `sourceUrl` or `licenses`. Publishing is the only place their absence shows,
-# and by then the artifact is already in a registry — so add them now.
+# and by then the artifact is already in a registry - so add them now.
 # mem0ai is pinned to 2.0.5 in the install hook below, so the mixin can honestly
 # offer that name@version; `version:` is the artifact's own version and the
 # fallback for any unversioned provide.
@@ -21,7 +21,7 @@ version: "2.0.5"
 provides: ["mem0@2.0.5"]
 
 # MIGRATION NOTE: the source kit declared no dependency on the base. This mixin's
-# install hooks need python3 + pip on whatever workload it lands on — beyond the
+# install hooks need python3 + pip on whatever workload it lands on - beyond the
 # platform floor (§12 guarantees only bash, sh, curl, git, a CA store, the agent
 # user at uid 1000). Declaring an *unprovidable* name makes the kit refuse to
 # compose EVERYWHERE, so verify the names are really in the base's dpkg database
@@ -54,7 +54,7 @@ capabilities:
           # MIGRATION NOTE: the source kit listed `localhost:12434`, but both the
           # env vars and config.json point at host.docker.internal:12434.
           # `localhost` inside the sandbox is the sandbox itself, not the host's
-          # DMR — so the actual runtime connection is host.docker.internal, and
+          # DMR - so the actual runtime connection is host.docker.internal, and
           # that is what the allow-list must name.
           - host.docker.internal:12434
 
@@ -63,7 +63,7 @@ capabilities:
   # the composed image; the descriptor has no field for static env.
 
   # v1 memory: → agent-context@1. The body moved verbatim into mem0-context.md.
-  # No `filename:` here — that is workload-only (the workload owns the agent
+  # No `filename:` here - that is workload-only (the workload owns the agent
   # profile); a mixin carries `contentFile` alone.
   - type: com.docker.sandbox/agent-context@1
     config:
@@ -75,7 +75,7 @@ capabilities:
       # MIGRATION NOTE: these stay create-time install hooks rather than becoming
       # overlay layers. mem0ai installs into the *composed base's* system Python
       # (via --break-system-packages), and a mixin overlay lands on an unknown
-      # base where the Python version and site-packages path differ — a baked
+      # base where the Python version and site-packages path differ - a baked
       # copy would not resolve. The hook runs where Python actually is.
       # HTTP_PROXY/HTTPS_PROXY are declared because pip and spacy fetch through
       # the sandbox's forced proxy, and v3 hook environments are deny-by-default:
