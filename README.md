@@ -92,6 +92,31 @@ image built by a BuildKit frontend, not YAML the engine interprets.
 anything where `schemaVersion != "3"`. v3 kits are published under the `docker`
 org on Docker Hub; the old `sbx` org is v2. Don't mix them.
 
+### One file becomes three
+
+v2 packed every concern into a single `spec.yaml`. v3 splits them by *what they
+are* — declarative needs, static env, and prose:
+
+```text
+v2 (before)                         v3 (after)
+───────────                         ──────────
+sbx-kits-mem0/                      sbx-kits-mem0/
+└── spec.yaml                       ├── mem0.yaml         ← descriptor (capabilities[])
+    (network + env +                ├── mem0.dockerfile   ← recipe (carries ENV)
+     commands + memory)             └── mem0-context.md   ← agent instructions
+```
+
+Each v2 section lands in a specific v3 file:
+
+| v2 `spec.yaml` section | → | Where it goes in v3 |
+|---|---|---|
+| `network.allowedDomains` | → | `mem0.yaml` → `network-policy@1` (split into `install.allow` + `runtime.allow`) |
+| `commands.install` | → | `mem0.yaml` → `lifecycle@1` install hooks |
+| `commands.initFiles` | → | `mem0.yaml` → `lifecycle@1` files (`onlyIfMissing` → `overwrite:false`) |
+| `memory:` | → | `mem0-context.md` (referenced by `agent-context@1`) |
+| `environment.variables` | → | `mem0.dockerfile` as `ENV` (a mixin's only way to carry static env) |
+| `name:` | → | *dropped* — v3 identity is the OCI image reference |
+
 See the full before/after for mem0 in [`examples/mem0/`](examples/mem0/).
 
 ---
