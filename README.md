@@ -1,7 +1,7 @@
 # Migrate your Docker Sandbox Kit from v2 to v3
 
-**For partners** — keycard, jfrog, mem0, firecrawl, and anyone else shipping a
-sandbox kit. You are all on **v2** today. This repo shows you two things:
+**For anyone shipping a Docker sandbox kit.** If you're on **v2** today, this
+repo shows you two things:
 
 1. **What your v2 kit looks like** — so you recognize it.
 2. **The one skill that migrates it to v3** — so you don't do it by hand.
@@ -21,7 +21,7 @@ ln -sfn "$PWD/sandbox-kit-spec/skills/migrate-kit-to-v3" ~/.claude/skills/migrat
 ln -sfn "$PWD/sandbox-kit-spec/skills/create-kit-v3"     ~/.claude/skills/create-kit-v3
 
 # 2. In YOUR kit's repo, start Claude Code and ask it to migrate:
-cd ~/your-kit-repo        # e.g. sbx-kits-keycard, sbx-kits-jfrog
+cd ~/your-kit-repo        # the repo that holds your v2 spec.yaml
 claude
 #   → "migrate this v2 kit to v3"
 
@@ -146,7 +146,7 @@ ls -l ~/.claude/skills      # you should see the two "-> …" symlinks
 ## 4. Run the migration (per kit)
 
 ```sh
-cd ~/your-kit-repo     # keycard, jfrog, firecrawl, …
+cd ~/your-kit-repo     # the repo that holds your v2 spec.yaml
 claude
 #   → "migrate this v2 kit to v3"
 ```
