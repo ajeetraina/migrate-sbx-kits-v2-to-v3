@@ -1,7 +1,6 @@
 # Migrate your Docker Sandbox Kit from v2 to v3
 
-**For partners** — keycard, jfrog, mem0, firecrawl, and anyone else shipping a
-sandbox kit. You are all on **v2** today. This repo shows you two things:
+This repo shows you two things:
 
 1. **What your v2 kit looks like** — so you recognize it.
 2. **The one skill that migrates it to v3** — so you don't do it by hand.
